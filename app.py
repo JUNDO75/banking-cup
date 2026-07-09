@@ -3,15 +3,31 @@ import streamlit as st
 # Configuration de la page
 st.set_page_config(page_title="Banking Cup", page_icon="🏆", layout="wide")
 
+# --- CONFIGURATION DES ÉQUIPES ET MOTS DE PASSE ---
+# Tu peux changer les noms des banques et les mots de passe ici !
+DICTIONNAIRE_EQUIPES = {
+    "Banque 1": "b1-2026",
+    "Banque 2": "b2-2026",
+    "Banque 3": "b3-2026",
+    "Banque 4": "b4-2026"
+}
+
 # --- INITIALISATION DE LA NAVIGATION ---
 if 'etape' not in st.session_state:
     st.session_state.etape = 'bienvenue'
+if 'nom_equipe' not in st.session_state:
+    st.session_state.nom_equipe = None
 
 def aller_au_mode_demploi():
     st.session_state.etape = 'manuel'
 
-def lancer_le_jeu():
-    st.session_state.etape = 'jeu'
+def aller_a_la_connexion():
+    st.session_state.etape = 'connexion'
+
+def deconnexion():
+    st.session_state.etape = 'connexion'
+    st.session_state.nom_equipe = None
+    st.rerun()
 
 # --- 1. ÉCRAN DE BIENVENUE ---
 if st.session_state.etape == 'bienvenue':
@@ -37,25 +53,52 @@ elif st.session_state.etape == 'manuel':
     
     ⚠️ **Attention à rester cohérent dans vos choix !**
     """)
-    st.button("J'ai compris, accéder au tableau de bord de la banque 🚀", on_click=lancer_le_jeu, use_container_width=True)
+    st.button("J'ai compris, m'authentifier 🔐", on_click=aller_a_la_connexion, use_container_width=True)
 
-# --- 3. L'INTERFACE DE JEU COMPLÈTE ---
+# --- 3. ÉCRAN DE CONNEXION AVEC MOT DE PASSE ---
+elif st.session_state.etape == 'connexion':
+    st.title("🔐 Connexion à votre Espace Banque")
+    st.write("Veuillez sélectionner votre équipe et saisir le code d'accès fourni par le Maître du Jeu.")
+    
+    # Formulaire de connexion
+    choix_equipe = st.selectbox("Sélectionnez votre Banque :", list(DICTIONNAIRE_EQUIPES.keys()))
+    mot_de_passe = st.text_input("Mot de passe :", type="password")
+    
+    if st.button("Se connecter 🚀", use_container_width=True):
+        mdp_correct = DICTIONNAIRE_EQUIPES[choix_equipe]
+        
+        if mot_de_passe == mdp_correct:
+            st.session_state.nom_equipe = choix_equipe
+            st.session_state.etape = 'jeu'
+            st.success(f"Connexion réussie ! Bienvenue {choix_equipe}.")
+            st.rerun()
+        elif mot_de_passe == "":
+            st.warning("Veuillez saisir un mot de passe.")
+        else:
+            st.error("❌ Mot de passe incorrect pour cette banque. Veuillez réessayer.")
+
+# --- 4. L'INTERFACE DE JEU COMPLÈTE (ACCÈS SÉCURISÉ) ---
 elif st.session_state.etape == 'jeu':
-    if st.sidebar.button("⬅️ Relire le mode d'emploi"):
-        st.session_state.etape = 'manuel'
-        st.rerun()
-
-    st.title("🏢 Tableau de Bord de la Banque")
+    
+    # Sidebar personnalisée pour l'équipe
+    st.sidebar.markdown(f"### 👤 Connecté : **{st.session_state.nom_equipe}**")
+    
+    if st.sidebar.button("🚪 Se déconnecter / Changer d'équipe"):
+        deconnexion()
+        
+    st.sidebar.markdown("---")
     
     # Simulateur de verrouillage du MJ
     manche_verrouillee = st.sidebar.toggle("🔒 Verrouillage MJ", value=False)
     
     if manche_verrouillee:
-        st.error("🔒 MANCHE CLÔTURÉE : Le Maître du Jeu calcule les résultats de la manche.")
+        st.error(f"🔒 MANCHE CLÔTURÉE : Le Maître du Jeu calcule les résultats pour la {st.session_state.nom_equipe}.")
     else:
-        st.success("🔓 MANCHE OUVERTE : Saisie de l'Anée N+1 en cours.")
+        st.success(f"🔓 MANCHE OUVERTE : Saisie de l'Année N+1 pour la {st.session_state.nom_equipe}.")
 
-    # Organisation en 3 grands onglets (Orange, Bleu, Jaune) comme ton règlement !
+    st.title(f"🏢 Tableau de Bord — {st.session_state.nom_equipe}")
+    
+    # Organisation en 3 grands onglets (Orange, Bleu, Jaune)
     onglet_orange, onglet_bleu, onglet_jaune = st.tabs(["🟠 ZONE ORANGE : Vos Décisions", "🔵 ZONE BLEUE : Vos Résultats", "🟡 ZONE JAUNE : Analyse Marché"])
 
     with onglet_orange:
@@ -195,14 +238,14 @@ elif st.session_state.etape == 'jeu':
                 tx_struct = st.number_input("Structurés (tx marge %)", min_value=0.0, value=2.80, step=0.05, disabled=manche_verrouillee)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 Soumettre les décisions de la banque", use_container_width=True, disabled=manche_verrouillee):
+        if st.button(f"🚀 Soumettre les décisions de la {st.session_state.nom_equipe}", use_container_width=True, disabled=manche_verrouillee):
             st.balloons()
-            st.success("✅ Vos décisions pour l'Année N+1 ont été enregistrées avec succès ! Prévenez le Maître du Jeu.")
+            st.success(f"✅ Les décisions de la {st.session_state.nom_equipe} pour l'Année N+1 ont été transmises ! Prévenez le MJ.")
 
     with onglet_bleu:
-        st.write("### 🔵 Vos Comptes et Indicateurs de Rentabilité")
-        st.info("Les tableaux de résultats de votre agence s'afficheront ici de manière dynamique dès que le Maître du Jeu aura calculé la clôture de la manche.")
+        st.write(f"### 🔵 Résultats Financiers — {st.session_state.nom_equipe}")
+        st.info("Vos indicateurs financiers personnalisés s'afficheront ici après la clôture de la manche.")
 
     with onglet_jaune:
-        st.write("### 🟡 Analyse et Positionnement sur le Marché")
-        st.info("Retrouvez ici les graphiques comparatifs de vos parts de marché face aux banques concurrentes après la clôture de la manche.")
+        st.write("### 🟡 Analyse Global Marché")
+        st.info("Retrouvez ici les graphiques comparatifs de toutes les banques après la clôture de la manche.")
